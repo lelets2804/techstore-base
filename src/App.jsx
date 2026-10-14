@@ -48,7 +48,7 @@ export default function App() {
   }, [avisosEsgotados])
 
   function adicionarAoCarrinho(produto) {
-    setCarrinho(carrinho.concat(produto))
+    setCarrinho((atuais) => atuais.concat(produto))
   }
 
   function removerUmaUnidade(produtoId) {

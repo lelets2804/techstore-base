@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 
 export default function PaginaProduto({
@@ -8,8 +8,39 @@ export default function PaginaProduto({
 }) {
   const { id } = useParams()
   const [produtoNotificadoId, setProdutoNotificadoId] = useState(null)
+  const [produtosAdicionados, setProdutosAdicionados] = useState({})
+  const cliquesBloqueados = useRef(new Set())
+  const temporizadores = useRef({})
   const produto = produtos.find((item) => String(item.id) === id)
   const esgotado = produto ? Number(produto.estoque) <= 0 : false
+
+  useEffect(() => {
+    return () => {
+      Object.values(temporizadores.current).forEach((temporizador) => {
+        window.clearTimeout(temporizador)
+      })
+    }
+  }, [])
+
+  function adicionarComFeedback(item) {
+    const produtoId = String(item.id)
+
+    if (cliquesBloqueados.current.has(produtoId)) return
+
+    cliquesBloqueados.current.add(produtoId)
+    onAdicionar(item)
+    setProdutosAdicionados((atuais) => ({ ...atuais, [produtoId]: true }))
+
+    temporizadores.current[produtoId] = window.setTimeout(() => {
+      cliquesBloqueados.current.delete(produtoId)
+      setProdutosAdicionados((atuais) => {
+        const atualizados = { ...atuais }
+        delete atualizados[produtoId]
+        return atualizados
+      })
+      delete temporizadores.current[produtoId]
+    }, 1200)
+  }
 
   if (!produto) {
     return (
@@ -58,11 +89,14 @@ export default function PaginaProduto({
           </p>
 
           <button
+            type="button"
             className="botao botao-grande"
-            onClick={() => onAdicionar(produto)}
-            disabled={esgotado}
+            onClick={() => adicionarComFeedback(produto)}
+            disabled={esgotado || Boolean(produtosAdicionados[String(produto.id)])}
           >
-            Adicionar ao carrinho
+            {produtosAdicionados[String(produto.id)]
+              ? 'Adicionado!'
+              : 'Adicionar ao carrinho'}
           </button>
 
           {esgotado && (
@@ -127,8 +161,15 @@ export default function PaginaProduto({
             <p className="preco">
               R$ {Number(item.price).toFixed(2).replace('.', ',')}
             </p>
-            <button className="botao" onClick={() => onAdicionar(item)}>
-              Adicionar ao carrinho
+            <button
+              type="button"
+              className="botao"
+              onClick={() => adicionarComFeedback(item)}
+              disabled={Boolean(produtosAdicionados[String(item.id)])}
+            >
+              {produtosAdicionados[String(item.id)]
+                ? 'Adicionado!'
+                : 'Adicionar ao carrinho'}
             </button>
           </article>
         ))}
