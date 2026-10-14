@@ -1,21 +1,41 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import SugestaoItem from '../components/SugestaoItem'
+import ProdutoCard from '../components/ProdutoCard'
 import { agruparItens, calcularTotal } from '../utils/carrinho'
 import { validarCupom } from '../utils/cupons'
 import { formatarPreco } from '../utils/formatarPreco'
 
-export default function Carrinho({ carrinho, produtos, clienteAtual, onAdicionar, onRemover }) {
+export default function Carrinho({
+  carrinho,
+  produtos,
+  clienteAtual,
+  onAdicionar,
+  onRemover,
+}) {
   const [codigoCupom, setCodigoCupom] = useState('')
   const [cupomAplicado, setCupomAplicado] = useState(null)
   const [mensagemCupom, setMensagemCupom] = useState('')
 
   const itens = agruparItens(carrinho)
   const total = calcularTotal(carrinho)
-  const totalComDesconto = cupomAplicado ? total * (1 - cupomAplicado.desconto) : total
+  const totalComDesconto = cupomAplicado
+    ? total * (1 - cupomAplicado.desconto)
+    : total
+
+  const totalFinalCentavos = Math.round(totalComDesconto * 100)
+  const limiteFreteGratisCentavos = 20000
+  const freteGratis = totalFinalCentavos > limiteFreteGratisCentavos
+  const faltaFreteCentavos = Math.max(
+    0,
+    limiteFreteGratisCentavos + 1 - totalFinalCentavos
+  )
 
   const sugestoes = produtos
-    .filter((produto) => !carrinho.find((item) => item.id === produto.id))
+    .filter(
+      (produto) =>
+        Number(produto.estoque) > 0 &&
+        !carrinho.find((item) => item.id === produto.id)
+    )
     .slice(0, 3)
 
   function aplicarCupom(evento) {
@@ -53,15 +73,28 @@ export default function Carrinho({ carrinho, produtos, clienteAtual, onAdicionar
         <ul className="lista-carrinho">
           {itens.map((item) => (
             <li key={item.produto.id} className="item-carrinho">
-              <div className="item-imagem-moldura">
+              <Link
+                to={`/produto/${item.produto.id}`}
+                className="item-imagem-moldura"
+              >
                 <img src={item.produto.image} alt={item.produto.title} />
-              </div>
+              </Link>
               <div className="item-info">
-                <p className="item-titulo">{item.produto.title}</p>
-                <p className="item-preco">R$ {item.produto.price}</p>
+                <p className="item-titulo">
+                  <Link to={`/produto/${item.produto.id}`}>
+                    {item.produto.title}
+                  </Link>
+                </p>
+                <p className="item-preco">
+                  {formatarPreco(item.produto.price)}
+                </p>
               </div>
               <span className="item-quantidade">{item.quantidade} un.</span>
-              <button className="botao-texto" onClick={() => onRemover(item.produto.id)}>
+              <button
+                type="button"
+                className="botao-texto"
+                onClick={() => onRemover(item.produto.id)}
+              >
                 Remover 1
               </button>
             </li>
@@ -93,6 +126,13 @@ export default function Carrinho({ carrinho, produtos, clienteAtual, onAdicionar
               <span>{cupomAplicado.desconto * 100}%</span>
             </p>
           )}
+
+          <p className="aviso" role="status">
+            {freteGratis
+              ? 'Você ganhou frete grátis!'
+              : `Faltam ${formatarPreco(faltaFreteCentavos / 100)} para ganhar frete grátis.`}
+          </p>
+
           <p className="total">
             <span>Total</span>
             <span>{formatarPreco(totalComDesconto)}</span>
@@ -101,9 +141,13 @@ export default function Carrinho({ carrinho, produtos, clienteAtual, onAdicionar
       </div>
 
       <h2>Você também pode gostar</h2>
-      <div className="sugestoes">
+      <div className="grade">
         {sugestoes.map((produto) => (
-          <SugestaoItem key={produto.id} produto={produto} onAdicionar={onAdicionar} />
+          <ProdutoCard
+            key={produto.id}
+            produto={produto}
+            onAdicionar={onAdicionar}
+          />
         ))}
       </div>
     </section>
