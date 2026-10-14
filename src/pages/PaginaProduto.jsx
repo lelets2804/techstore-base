@@ -1,8 +1,15 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 
-export default function PaginaProduto({ produtos, onAdicionar }) {
+export default function PaginaProduto({
+  produtos,
+  onAdicionar,
+  onSolicitarAviso,
+}) {
   const { id } = useParams()
-  const produto = produtos.find((item) => item.id === id)
+  const [produtoNotificadoId, setProdutoNotificadoId] = useState(null)
+  const produto = produtos.find((item) => String(item.id) === id)
+  const esgotado = produto ? Number(produto.estoque) <= 0 : false
 
   if (!produto) {
     return (
@@ -16,7 +23,12 @@ export default function PaginaProduto({ produtos, onAdicionar }) {
   }
 
   const relacionados = produtos
-    .filter((item) => item.category === produto.category && item.id !== produto.id)
+    .filter(
+      (item) =>
+        item.category === produto.category &&
+        String(item.id) !== id &&
+        Number(item.estoque) > 0
+    )
     .slice(0, 4)
 
   return (
@@ -37,17 +49,63 @@ export default function PaginaProduto({ produtos, onAdicionar }) {
           <p className="card-avaliacao">
             ★ {produto.rating.rate} <span>({produto.rating.count} avaliações)</span>
           </p>
-          <p className="detalhe-preco">R$ {produto.price.toFixed(2).replace('.', ',')}</p>
+          <p className="detalhe-preco">
+            R$ {Number(produto.price).toFixed(2).replace('.', ',')}
+          </p>
           <p className="detalhe-descricao">{produto.description}</p>
-          <p className="detalhe-estoque">{produto.estoque} unidades disponíveis</p>
+          <p className="detalhe-estoque">
+            {Number(produto.estoque)} unidades disponíveis
+          </p>
 
           <button
             className="botao botao-grande"
             onClick={() => onAdicionar(produto)}
-            disabled={produto.estoque === 0}
+            disabled={esgotado}
           >
             Adicionar ao carrinho
           </button>
+
+          {esgotado && (
+            <form
+              className="aviso-esgotado"
+              onSubmit={(evento) => {
+                evento.preventDefault()
+                const dados = new FormData(evento.currentTarget)
+
+                onSolicitarAviso({
+                  produtoId: produto.id,
+                  nome: String(dados.get('nome') || '').trim(),
+                  email: String(dados.get('email') || '').trim(),
+                })
+
+                setProdutoNotificadoId(produto.id)
+                evento.currentTarget.reset()
+              }}
+            >
+              <p>
+                Produto esgotado. Informe seus dados para receber um aviso
+                quando voltar.
+              </p>
+
+              <label>
+                Nome
+                <input type="text" name="nome" required />
+              </label>
+
+              <label>
+                E-mail
+                <input type="email" name="email" required />
+              </label>
+
+              <button type="submit" className="botao botao-secundario">
+                Avise-me quando voltar
+              </button>
+
+              {String(produtoNotificadoId) === String(produto.id) && (
+                <p role="status">Pedido registrado.</p>
+              )}
+            </form>
+          )}
 
           <ul className="detalhe-garantias">
             <li>Troca grátis em até 30 dias</li>
@@ -66,7 +124,9 @@ export default function PaginaProduto({ produtos, onAdicionar }) {
               </div>
               <h3 className="card-titulo">{item.title}</h3>
             </Link>
-            <p className="preco">R$ {Number(item.price).toFixed(2).replace('.', ',')}</p>
+            <p className="preco">
+              R$ {Number(item.price).toFixed(2).replace('.', ',')}
+            </p>
             <button className="botao" onClick={() => onAdicionar(item)}>
               Adicionar ao carrinho
             </button>

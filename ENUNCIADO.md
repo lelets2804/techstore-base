@@ -42,7 +42,7 @@ Você assumiu a manutenção da TechStore, uma loja virtual em React que já est
 ---
 
 ## Grupo 1 (escolha 1)
-
+ 
 ### A. Botão de adicionar ao carrinho
 
 **Mensagem do atendimento, 9 de outubro**
